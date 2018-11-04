@@ -21,21 +21,16 @@ options=(
 
 # start a state machine. The state is modified by _arguments if the 
 # current argument (descriptors) cannot be completed. Each state has to define is successive state and the 
-# 'action' for _arguments, which essentially tells arguments how to complete 
+# 'descriptors' for _arguments, which essentially tells _arguments how to complete
 _i=0
 while true;do
   (( _i+=1 ))
   #Guard for endless loops
   [[ $_i -gt 100 ]] && return 1
 
-  #echo "$_i:$state:${line[1]}:~$descriptors~:$nextstate" >> /tmp/nftcomplog
   descriptors=()
   nextstate="end"
   case $state in 
-#  (restart)
-#   descriptors=(':: :(\;)')
-#   nextstate="start"
-#  ;;
   (start)
     ##if line is empty (at the start) or ends with semicolon, autocomplete subcommands,
     # else if we are after a space,complete a semicolon (end the current nft command) and start anew 
@@ -43,14 +38,11 @@ while true;do
       descriptors=( ":: :_nft_subcommands" )
       nextstate="category"
     else
-      #echo "+$_i:$state:${line[1]}:x~$curcontext~x:$words:*:" >> /tmp/nftcomplog
       if [[ $words =~ ' $' ]]; then
         descriptors=(':: :(\;)')
       else
         descriptors=(':argument: ')
       fi
-      #+101:start:fhjs:x~:complete:nft:argument-rest~x:fhe:*:
-      #+  4:start:fhe:x~:complete:nft:argument-rest~x:fhe :*:
       nextstate="start"
     fi
   ;;
@@ -245,7 +237,6 @@ while true;do
     return 1;
   ;;
   esac
-  #echo "-$_i:$state:${line[1]}:~$descriptors~:$nextstate" >> /tmp/nftcomplog
   _arguments -C -s \
     "${options[@]}" \
     "${descriptors[@]}" \
@@ -253,37 +244,22 @@ while true;do
     && return 0;
 
 done
-
-
-#  ":: :((${cmddescs}))" \
-
-# if state (set by _arguments) is not expected, quit early.
-#[[ $state == "subcom" ]] && return 1
-
-#  ":: :((${(q)cmddescs[@]}))" \
-wor2ds=($line[1] "${words[@]}")
-curcontext2="${curcontext%:*:*}:rustup-command-$line[1]:"
-#echo "STATE:$state +words:+ $words ++ $wor2ds +line:+ $line +ctx2+ $curcontext2 +ctx+ $curcontext"  2>&1 >>/tmp/nftcomplog
-#_describe -t cmddescs 'rustup commands' cmddescs "$@"
-
-
-
-}
+} # end _nft
 
 _nft_subcommands(){
   local commands=(
-	'add:Add a table, chain, rule, set, map, or object'
-	'list:List a ruleset, table, chain, set, map, or object'
-	'flush:Flush (delete everything from) a ruleset, table, chain, set, or map'
-	'export:Print the ruleset in a machine readable format (json or xml)'
-	'delete:Delete a table, chain, rule, set, element, map, or object'
-	'create:Similar to add but returns an error for existing chain'
-	'rename:Rename the specified chain'
-	'insert:Similar to the add command, but the rule is prepended to the beginning of the chain or before the rule at the given position'
-	'replace:Similar to the add command, but replaces the specified rule'
-	'reset:List-and-reset stateful object'
-	'monitor:Listen to Netlink Events'
-	'describe:Show information about the type of an expression and its data type'
+	'add:add a table, chain, rule, set, map, or object'
+	'list:list a ruleset, table, chain, set, map, or object'
+	'flush:flush (delete everything from) a ruleset, table, chain, set, or map'
+	'export:print the ruleset in a machine readable format (json or xml)'
+	'delete:delete a table, chain, rule, set, element, map, or object'
+	'create:similar to add but returns an error for existing chain'
+	'rename:rename the specified chain'
+	'insert:similar to the add command, but the rule is prepended to the beginning of the chain or before the rule at the given position'
+	'replace:similar to the add command, but replaces the specified rule'
+	'reset:list-and-reset stateful object'
+	'monitor:listen to Netlink events'
+	'describe:show information about the type of an expression and its data type'
   )
   _describe -t commands 'nft subcommands' commands "${expl[@]}"
 }
@@ -320,15 +296,15 @@ _nft_out_format(){
 _nft_add(){
   local commands=(
     'table:add a new table'
-    'flowtable:Add a new flowtable'
+    'flowtable:add a new flowtable'
     'chain:add a chain to a table'
     'rule:add a rule to an existing chain'
-    'set:Add a set to a table'
-    'map:Add a map to a table'
-    'element:Add one or multiple element(s) to a set or map'
-    'ct\ helper:Add a ct helper to a table'
-    'counter:Add a named counter to a table'
-    'quota:Add a named quota helper to a table'
+    'set:add a set to a table'
+    'map:add a map to a table'
+    'element:add one or multiple element(s) to a set or map'
+    'ct\ helper:add a ct helper to a table'
+    'counter:add a named counter to a table'
+    'quota:add a named quota helper to a table'
   )
   _describe -t commands 'nft add' commands "$@"
 }
@@ -418,7 +394,7 @@ _nft_families(){
   local commands=(
     "ip:IPv4 address family"
     "ip6:IPv6 address family"
-    "inet:internet (IPv4/IPv6) address family"
+    "inet:internet (IPv4+IPv6) address family"
     "arp:ARP address family, handling IPv4 ARP packets"
     "bridge:Bridge address family, handling packets which traverse a bridge device"
     "netdev:Netdev address family, handling packets from ingress"
@@ -429,7 +405,6 @@ _nft_families(){
 _nft_table(){
   #$1 can be: all all-handle <family> <family>-handle
   local tables=()
-  #echo ":completion:${curcontext%:*}/${${(@M)_comp_priv_prefix:#^*[^\\]=*}[1]}:nft-tables" $_comp_priv_prefix >>/tmp/znft-priv
   if [[ "$1" =~ "^all" ]]; then
     tables+=( ${(f)"$(_call_program -p nft-tables nft list tables 2>/dev/null \
         | cut -d\  -f2 |sort|uniq -u )"} )
@@ -437,7 +412,7 @@ _nft_table(){
   fi
   if [[ "$1" =~ "-handle$" ]]; then
     tables+=("handle")
-    #remove -handle to be able to complete table names
+    #remove -handle from $1 to be able to complete table names
     1="${1/-handle/}"
   fi
   case $1 in 
@@ -485,18 +460,6 @@ _nft_rule_handle(){
       |grep -v '^\s*\(table\|chain\|type\|\}\)'|sed 's/^\s*\(.*\) # handle \(\S*\)$/\2:\1/' )"} )
   _describe -t rules rules rules "${expl[@]}"
 }
-
-_nft_handle(){
-
-}
-
-#  case $1 in
-#  (table)
-#  ;;
-#  (chain)
-#  ;;
-
-
 
 
 _nft "$@"
