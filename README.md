@@ -1,3 +1,7 @@
+
+|NOTE: This completion script has been moved to https://github.com/zsh-users/zsh-completions . This means it will most likely be installable via your package manager. You can still open issues here but the fixes will be applied there.|
+|------|
+
 # nft completion for zsh
 
 
